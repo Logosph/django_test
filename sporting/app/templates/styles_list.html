@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Styles</title>
+</head>
+<body>
+
+<h1>Styles</h1>
+<a href="/admin">Back</a>
+<p>{{ error_message|default_if_none:"" }}</p>
+
+<ul>
+    {% for style in styles %}
+        <li>
+            {{ style.name }}
+            <button onclick="showEditForm('{{ style.id }}')">Изменить</button>
+            
+            <form method="post" action="/admin/delete_style/{{ style.id }}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit">Удалить</button>
+            </form>
+            
+            <div id="edit-form-{{ style.id }}" style="display:none;">
+                <form method="post" action="/admin/edit_style/{{ style.id }}">
+                    {% csrf_token %}
+                    <input type="text" name="new_name" placeholder="Новое название">
+                    <button type="submit">Сохранить название</button>
+                </form>
+            </div>
+        
+        </li>
+        
+    {% empty %}
+        <p>Стили танцев отсутствуют</p>
+    {% endfor %}
+
+</ul>
+
+<button onclick="showAddForm()">Add Style</button>
+<div id="add-form" style="display:none;">
+    <form method="POST" action="/admin/add_style">
+        {% csrf_token %}
+        <table>
+            {{ style_form }}
+        </table>
+        <input type="submit" value="Submit" style="display: inline">
+    </form>
+
+</div>
+
+<script>
+    
+    function showEditForm(styleId) {
+        let form = document.getElementById('edit-form-' + styleId);
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function showAddForm() {
+        let form = document.getElementById('add-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+</script>
+</body>
+</html>

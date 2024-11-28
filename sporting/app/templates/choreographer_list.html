@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Choreographers</title>
+</head>
+<body>
+
+<h1>Choreographers</h1>
+<a href="/admin">Back</a>
+<p>{{ error_message|default_if_none:"" }}</p>
+
+<ul>
+    {% for choreographer in choreographers %}
+        <li>
+            {{ choreographer.name }}, {{ choreographer.style }}
+            <button onclick="showEditForm('{{ choreographer.id }}')">Изменить</button>
+
+            <form method="post" action="/admin/delete_choreographer/{{ choreographer.id }}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit">Удалить</button>
+            </form>
+
+            <div id="edit-form-{{ choreographer.id }}" style="display:none;">
+                <form method="post" action="/admin/edit_choreographer/{{ choreographer.id }}">
+                    {% csrf_token %}
+                    {{ choreographer_form }}
+                    <input type="submit" value="Submit" style="display: inline">
+                </form>
+            </div>
+
+        </li>
+    {% empty %}
+        <p>Стили танцев отсутствуют</p>
+    {% endfor %}
+</ul>
+
+<button onclick="showAddForm()">Add choreographer</button>
+<div id="add-form" style="display:none;">
+    <form method="post" action="/admin/add_choreographer">
+        {% csrf_token %}
+        {{ choreographer_form }}
+        <input type="submit" value="Submit" style="display: inline">
+    </form>
+</div>
+
+<script>
+
+    function showEditForm(choreographerId) {
+        let form = document.getElementById('edit-form-' + choreographerId);
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function showAddForm() {
+        let form = document.getElementById('add-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+</script>
+</body>
+</html>
