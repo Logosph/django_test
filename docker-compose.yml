@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: sporting
+      POSTGRES_USER: eleonora
+      POSTGRES_PASSWORD: eleonora
+    volumes:
+      - postgres_data:/Users/logosph/postgres_dbs/eleonora_5_sem_db
+    ports:
+      - "5432:5432"
+
+  web:
+    build: ./sporting
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/application
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://eleonora:eleonora@db:5432/sporting
+
+volumes:
+  postgres_data:

@@ -1,7 +1,10 @@
+import re
+
+from django.http import HttpRequest
 from django.shortcuts import redirect, render
 
 from app import models
-from app.forms import DanceSchoolForm, EditDanceSchoolForm
+from app.forms.dance_school_forms import DanceSchoolForm, EditDanceSchoolForm
 from app.views.helper import check_jwt
 
 
@@ -20,7 +23,12 @@ def admin_schools(request):
         "edit_school_form": EditDanceSchoolForm()
     }
 
-    for school_id, name, address, phone in schools.values_list("dance_school_id", "dance_school_name", "dance_school_address", "dance_school_address"):
+    for school_id, name, address, phone in schools.values_list(
+            "dance_school_id",
+            "dance_school_name",
+            "dance_school_address",
+            "phone_number"
+    ):
         contents["schools"].append(
             {
                 "id": school_id,
@@ -32,7 +40,39 @@ def admin_schools(request):
 
     contents["schools"].sort(key=lambda x: x["name"])
 
-    return check_jwt(request, render(request, "dance_school_list.html", contents))
+    return check_jwt(request, render(request, "admin/dance_school_list.html", contents))
+
+
+def get_on_error_render(
+        request: HttpRequest,
+        message: str,
+        school_form: DanceSchoolForm = DanceSchoolForm(),
+        edit_school_form: EditDanceSchoolForm = EditDanceSchoolForm()
+):
+    schools = [
+        {
+            "id": _id,
+            "name": name,
+            "address": address,
+            "phone": phone
+        } for _id, name, address, phone in models.DanceSchool.objects.all().values_list(
+            "dance_school_id",
+            "dance_school_name",
+            "dance_school_address",
+            "phone_number"
+        )
+    ]
+
+    return render(
+        request,
+        "admin/dance_school_list.html",
+        {
+            "error_message": message,
+            "schools": schools,
+            "school_form": school_form,
+            "edit_school_form": edit_school_form
+        }
+    )
 
 
 def add_school(request):
@@ -41,13 +81,27 @@ def add_school(request):
 
     form = DanceSchoolForm(request.POST)
 
+    check_result = check_jwt(request.COOKIES.get('access_token'), True)
+    if type(check_result) != type(True):
+        return redirect("/admin/login")
+
     if not form.is_valid():
-        return redirect("/admin/schools?error=Неверные данные")
+        return get_on_error_render(request=request, message="Неверные данные", school_form=form)
+
+    phone = form.cleaned_data["phone"]
+    if not (
+            re.match(r"^\+\d{1,3} ?\d{3} ?\d{3} ?\d{2} ?\d{2}$", phone) or
+            re.match(r"^8 ?\d{3} ?\d{3} ?\d{2} ?\d{2}$", phone) or
+            re.match(r"^\+\d{1,3} ?\(\d{3}\) ?\d{3}-\d{2}-\d{2}$", phone) or
+            re.match(r"^8 ?\(\d{3}\) ?\d{3}-\d{2}-\d{2}$", phone) or
+            re.match(r"^\d{3} ?\d{3} ?\d{2} ?\d{2}$", phone)
+    ):
+        return get_on_error_render(request=request, message="Неверный формат номера телефона", edit_school_form=form)
 
     school = models.DanceSchool.objects.filter(dance_school_name=form.cleaned_data["name"]).first()
 
     if school is not None:
-        return redirect("/admin/schools?error=Такая школа уже существует")
+        return get_on_error_render(request=request, message="Такая школа уже существует", school_form=form)
 
     models.DanceSchool.objects.create(
         dance_school_name=form.cleaned_data["name"],
@@ -55,3 +109,62 @@ def add_school(request):
         phone_number=form.cleaned_data["phone"]
     )
     return redirect("/admin/schools")
+
+
+def edit_school(request, _id):
+    if request.method != "POST":
+        return redirect("/admin/schools?error=Неверный метод запроса")
+
+    check_result = check_jwt(request.COOKIES.get('access_token'), True)
+    if type(check_result) != type(True):
+        return redirect("/admin/login")
+
+    form = EditDanceSchoolForm(request.POST)
+
+    if not form.is_valid():
+        return get_on_error_render(request=request, message="Неверные данные", edit_school_form=form)
+
+    new_name = form.cleaned_data["name"]
+    new_address = form.cleaned_data["address"]
+    new_phone = form.cleaned_data["phone"].strip()
+
+    school = models.DanceSchool.objects.filter(dance_school_id=_id)
+
+    if school is None:
+        return get_on_error_render(request=request, message="Такой школы не существует", edit_school_form=form)
+
+    if new_name != "":
+        school.update(dance_school_name=new_name)
+
+    if new_address != "":
+        school.update(dance_school_address=new_address)
+
+    if new_phone != "":
+        if not (
+                re.match(r"^\+\d{1,3} ?\d{3} ?\d{3} ?\d{2} ?\d{2}$", new_phone) or
+                re.match(r"^8 ?\d{3} ?\d{3} ?\d{2} ?\d{2}$", new_phone) or
+                re.match(r"^\+\d{1,3} ?\(\d{3}\) ?\d{3}-\d{2}-\d{2}$", new_phone) or
+                re.match(r"^8 ?\(\d{3}\) ?\d{3}-\d{2}-\d{2}$", new_phone) or
+                re.match(r"^\d{3} ?\d{3} ?\d{2} ?\d{2}$", new_phone)
+        ):
+            return get_on_error_render(request=request, message="Неверный формат номера телефона", edit_school_form=form)
+        else:
+            school.update(phone_number=new_phone)
+
+    return redirect("/admin/schools")
+
+
+def delete_school(request, _id: int):
+    if request.method != "POST":
+        return redirect("/admin/schools?error=Неверный метод запроса")
+
+    check_result = check_jwt(request.COOKIES.get('access_token'), True)
+    if type(check_result) != type(True):
+        return redirect("/admin/login")
+
+    school = models.DanceSchool.objects.filter(dance_school_id=_id)
+    if school.exists():
+        school.delete()
+        return redirect("/admin/schools")
+    else:
+        return redirect("/admin/schools?error=Такой школы не существует")

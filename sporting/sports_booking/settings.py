@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+import os
 import secrets
 from pathlib import Path
 
@@ -18,8 +19,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-pmg$$&@k3pok-rsp*1_0+2+se#p@^dy@h4_r_+9h$po%4b-*cb'
+SECRET_KEY_ADMIN = secrets.token_urlsafe(64)
+SECRET_KEY_USER = secrets.token_urlsafe(64)
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -54,7 +57,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
+    'SIGNING_KEY': SECRET_KEY_ADMIN,
     'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
@@ -96,19 +99,18 @@ WSGI_APPLICATION = 'sports_booking.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
     # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'sporting',
+    #     'USER': 'eleonora',
+    #     'PASSWORD': 'eleonora',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
     # }
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sporting',
-        'USER': 'eleonora',
-        'PASSWORD': 'eleonora',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
 }
 
 # Password validation
@@ -132,7 +134,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru-ru'
 
 TIME_ZONE = 'UTC'
 
@@ -150,4 +152,3 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-SECRET_KEY = secrets.token_urlsafe(64)

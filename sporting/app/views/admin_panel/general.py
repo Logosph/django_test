@@ -9,7 +9,7 @@ from sports_booking import settings
 
 
 def admin(request):
-    return check_jwt(request, render(request, "admin_panel.html"))
+    return check_jwt(request, render(request, "admin/admin_panel.html"))
 
 
 def admin_login(request):
@@ -24,7 +24,7 @@ def admin_login(request):
                 "username": user.username,
                 "exp": datetime.now(UTC) + timedelta(minutes=15)
             }
-            token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+            token = jwt.encode(payload, settings.SECRET_KEY_ADMIN, algorithm='HS256')
             response = redirect('/admin/')
             response.set_cookie('access_token', str(token), httponly=True)
             response.set_cookie('refresh_token', str(token), httponly=True)
@@ -32,5 +32,5 @@ def admin_login(request):
             print("User is found")
             return response
         else:
-            return render(request, "admin_login.html", {"error": "Неверное имя пользователя или пароль"})
-    return render(request, "admin_login.html")
+            return render(request, "admin/admin_login.html", {"error": "Неверное имя пользователя или пароль"})
+    return render(request, "admin/admin_login.html")

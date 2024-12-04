@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 
 from app import models
-from app.forms import ChoreographerForm
+from app.forms.choreographer_forms import ChoreographerForm
 from app.views.helper import check_jwt
 
 
@@ -39,7 +39,7 @@ def admin_choreographers(request):
     contents["styles"].sort(key=lambda x: x["name"])
     contents["choreographers"].sort(key=lambda x: x["name"])
 
-    return check_jwt(request, render(request, "choreographer_list.html", contents))
+    return check_jwt(request, render(request, "admin/choreographer_list.html", contents))
 
 
 def add_choreographer(request):
@@ -89,9 +89,12 @@ def edit_choreographer(request, _id: int):
     new_style = request.POST.get('style')
 
     choreographer = models.Choreographer.objects.filter(choreographer_id=_id)
-    if choreographer.exists():
-        choreographer.update(choreographer_name=new_name, style_id=models.Style.objects.get(style_id=int(new_style)))
-    else:
+    if not choreographer.exists():
         return redirect("/admin/choreographers?error=Такого хореографа не существует")
+
+    if new_name:
+        choreographer.update(choreographer_name=new_name)
+    if new_style:
+        choreographer.update(style_id=models.Style.objects.get(style_id=int(new_style)))
 
     return redirect("/admin/choreographers")
