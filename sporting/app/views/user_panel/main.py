@@ -1,10 +1,13 @@
+from datetime import datetime
+
 import jwt
 from django.shortcuts import render, redirect
 
 from app import models
+from app.models import DanceSchool
 from app.views.helper import check_jwt
 from sports_booking import settings
-
+from app.forms.user_forms import FilterForm
 
 def main(request):
     user_id = ""
@@ -21,6 +24,13 @@ def main(request):
     except jwt.InvalidTokenError:
         print("Invalid token")
         return redirect("/user/login")
+
+    from_date = datetime.strptime(request.GET.get("from_date"), "%Y-%m-%d").date() if request.GET.get("from_date") else None
+    to_date = datetime.strptime(request.GET.get("to_date"), "%Y-%m-%d").date() if request.GET.get("to_date") else None
+    styles = request.GET.getlist("styles") if request.GET.getlist("styles") else None
+
+    classes_page = request.GET.get("classes_page") if request.GET.get("classes_page") else 1
+    events_page = request.GET.get("events_page") if request.GET.get("events_page") else 1
 
     content = {
         "classes": [],
@@ -62,7 +72,7 @@ def main(request):
         .objects
         .all()
     )
-    dance_schools_dict = {dance_school.dance_school_id: dance_school for dance_school in dance_schools}
+    dance_schools_dict: dict[int: DanceSchool] = {dance_school.dance_school_id: dance_school for dance_school in dance_schools}
 
     appointments = (
         models
@@ -81,6 +91,10 @@ def main(request):
     print(appointments_dict.get(user_id))
 
     for name, date, dance_school_id in events.values_list("event_name", "date", "dance_school_id"):
+        if from_date is not None and from_date > date:
+            continue
+        if to_date is not None and to_date < date:
+            continue
         content["events"].append(
             {
                 "name": name,
@@ -90,6 +104,12 @@ def main(request):
             }
         )
     for _id, name, time, hall_id, choreographer_id in classes.values_list("master_class_id", "master_class_name", "time", "hall_id", "choreographer_id"):
+        if from_date is not None and from_date > time.date():
+            continue
+        if to_date is not None and to_date < time.date():
+            continue
+        if styles is not None and str(choreographers_dict.get(choreographer_id).style_id.style_id) not in styles:
+            continue
         content["classes"].append(
             {
                 "id": _id,
@@ -99,9 +119,32 @@ def main(request):
                 "school_name": dance_schools_dict.get(halls_dict.get(hall_id).dance_school_id.dance_school_id).dance_school_name,
                 "school_address": dance_schools_dict.get(halls_dict.get(hall_id).dance_school_id.dance_school_id).dance_school_address,
                 "choreographer": choreographers_dict.get(choreographer_id).choreographer_name,
-                "is_subscribed": appointments_dict.get(user_id) is not None and _id in appointments_dict.get(user_id)
+                "is_subscribed": appointments_dict.get(user_id) is not None and _id in appointments_dict.get(user_id),
+                "style": choreographers_dict.get(choreographer_id).style_id.style_name
             }
         )
+
+    content["classes_pages"] = [i for i in range(1, len(content["classes"]) // 3 + 2)]
+    content["events_pages"] = [i for i in range(1, len(content["events"]) // 3 + 2)]
+
+    content["classes"] = sorted(content["classes"], key=lambda x: x["time"])
+    content["events"] = sorted(content["events"], key=lambda x: x["date"])
+
+    content["classes"] = content["classes"][(int(classes_page) - 1) * 3:int(classes_page) * 3]
+    content["events"] = content["events"][(int(events_page) - 1) * 3:int(events_page) * 3]
+
+
+
+    styles = (
+        models
+        .Style
+        .objects
+        .all()
+    )
+
+    filter_form = FilterForm()
+    filter_form.update_choices([(style.style_id, style.style_name) for style in styles])
+    content["filter_form"] = filter_form
 
     return check_jwt(request, render(request, "user/user.html", content), settings.SECRET_KEY_USER, "/user/login")
 
