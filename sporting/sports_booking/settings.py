@@ -102,15 +102,15 @@ WSGI_APPLICATION = 'sports_booking.wsgi.application'
 import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'sporting',
-    #     'USER': 'eleonora',
-    #     'PASSWORD': 'eleonora',
-    #     'HOST': 'localhost',
-    #     'PORT': '5432',
-    # }
+    # 'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'sporting',
+        'USER': 'eleonora',
+        'PASSWORD': 'eleonora',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 
 # Password validation

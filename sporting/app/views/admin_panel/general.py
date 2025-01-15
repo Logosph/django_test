@@ -1,7 +1,9 @@
 from datetime import datetime, UTC, timedelta
 
 import jwt
+from django.http import HttpResponseNotAllowed, HttpResponse
 from django.shortcuts import render, redirect
+from django.views.decorators.csrf import csrf_exempt
 
 from app import models
 from app.views.helper import check_jwt
@@ -34,3 +36,28 @@ def admin_login(request):
         else:
             return render(request, "admin/admin_login.html", {"error": "Неверное имя пользователя или пароль"})
     return render(request, "admin/admin_login.html")
+
+'''
+API v1
+'''
+
+@csrf_exempt
+def api_admin_login(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+    user = models.AdminUser.objects.filter(username=username, password=password).first()
+    if user is not None:
+        payload = {
+            "user_id": user.id,
+            "username": user.username,
+            "exp": datetime.now(UTC) + timedelta(minutes=15)
+        }
+        token = jwt.encode(payload, settings.SECRET_KEY_ADMIN, algorithm='HS256')
+        resp = HttpResponse(status=200)
+        resp.headers['Token'] = token
+        return resp
+    else:
+        return HttpResponse(status=401)

@@ -52,8 +52,61 @@ user_patterns = [
     path("subscribe", main.subscribe),
 ]
 
+api_choreographers = [
+    path("edit/<int:_id>", choreographers.api_edit_choreographer, name='api_edit_choreographer'),
+    path("delete/<int:_id>", choreographers.api_delete_choreographer, name='api_delete_choreographer'),
+    path("add", choreographers.api_add_choreographer, name='api_add_choreographer'),
+    path("", choreographers.api_get_choreographers, name='api_get_choreographers'),
+]
+
+api_halls = [
+    path("edit/<int:_id>", halls.api_edit_hall, name='api_edit_hall'),
+    path("delete/<int:_id>", halls.api_delete_hall, name='api_delete_hall'),
+    path("add", halls.api_add_hall, name='api_add_hall'),
+    path("", halls.api_get_halls, name='api_get_halls'),
+]
+
+api_schools = [
+    path("edit/<int:_id>", schools.api_edit_school, name='api_edit_school'),
+    path("delete/<int:_id>", schools.api_delete_school, name='api_delete_school'),
+    path("add", schools.api_add_school, name='api_add_school'),
+    path("", schools.api_get_schools, name='api_get_schools'),
+]
+
+api_styles = [
+    path("edit/<int:_id>", styles.api_edit_style, name='api_edit_style'),
+    path("delete/<int:_id>", styles.api_delete_style, name='api_delete_style'),
+    path("add", styles.api_add_style, name='api_add_style'),
+    path("", styles.api_get_styles, name='api_get_styles'),
+]
+
+api_events = [
+    path("edit/<int:_id>", events.api_edit_event, name='api_edit_event'),
+    path("delete/<int:_id>", events.api_delete_event, name='api_delete_event'),
+    path("add", events.api_add_event, name='api_add_event'),
+    path("", events.api_get_events, name='api_get_events'),
+]
+
+api_classes = [
+    path("edit/<int:_id>", classes.api_edit_class, name='api_edit_class'),
+    path("delete/<int:_id>", classes.api_delete_class, name='api_delete_class'),
+    path("add", classes.api_add_class, name='api_add_class'),
+    path("", classes.api_get_classes, name='api_get_classes'),
+]
+
+api_v1 = [
+    path("admin/login", general.api_admin_login, name="api_admin_login"),
+    path("choreographers/", include(api_choreographers)),
+    path("halls/", include(api_halls)),
+    path("schools/", include(api_schools)),
+    path("styles/", include(api_styles)),
+    path("events/", include(api_events)),
+    path("classes/", include(api_classes)),
+]
+
 urlpatterns = [
     path("admin/", include(admin_patterns)),
     path("user/", include(user_patterns)),
-    path("", lambda request: render(request, "index.html"))
+    path("", lambda request: render(request, "index.html")),
+    path("api/v1/", include(api_v1)),
 ]

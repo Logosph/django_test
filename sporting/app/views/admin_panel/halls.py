@@ -1,4 +1,6 @@
+from django.http import HttpResponseNotAllowed, HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
 
 from app import models
 from app.forms.hall_forms import HallForm, EditHallForm
@@ -137,3 +139,120 @@ def delete_hall(request, _id: int):
         return redirect("/admin/halls")
     else:
         return redirect("/admin/halls?error=Такой школы не существует")
+
+'''
+API v1
+'''
+
+
+@csrf_exempt
+def api_add_hall(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    check_result = check_jwt(request.headers.get('Authorization').split(" ")[1], True)
+    if type(check_result) != type(True):
+        return HttpResponse(status=401)
+
+    form = HallForm(request.POST)
+    schools = models.DanceSchool.objects.all()
+    school_choices = [(school.dance_school_id, school.dance_school_name) for school in schools]
+    form.update_choices(school_choices)
+
+    if not form.is_valid():
+        return HttpResponse(status=400)
+
+    hall = models.Hall.objects.filter(hall_name=form.cleaned_data["name"]).first()
+    if hall is not None:
+        return HttpResponse(status=400)
+
+    models.Hall.objects.create(
+        dance_school_id=models.DanceSchool.objects.get(dance_school_id=form.cleaned_data["dance_school"]),
+        hall_name=form.cleaned_data["name"],
+        capacity=form.cleaned_data["capacity"]
+    )
+    return HttpResponse(status=200)
+
+
+@csrf_exempt
+def api_edit_hall(request, _id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    check_result = check_jwt(request.headers.get('Authorization').split(" ")[1], True)
+    if type(check_result) != type(True):
+        return HttpResponse(status=401)
+
+    form = EditHallForm(request.POST)
+    schools = models.DanceSchool.objects.all()
+    school_choices = [(school.dance_school_id, school.dance_school_name) for school in schools]
+    form.update_choices(school_choices)
+
+    if not form.is_valid():
+        return HttpResponse(status=400)
+
+    hall = models.Hall.objects.filter(hall_id=_id)
+    if not hall.exists():
+        return HttpResponseNotFound()
+
+    new_name = form.cleaned_data["name"]
+    new_capacity = form.cleaned_data["capacity"]
+    new_school = form.cleaned_data["dance_school"]
+
+    if new_name:
+        hall.update(hall_name=new_name)
+    if new_capacity:
+        hall.update(capacity=new_capacity)
+    if new_school:
+        hall.update(dance_school_id=models.DanceSchool.objects.get(dance_school_id=new_school))
+
+    return HttpResponse(status=200)
+
+
+@csrf_exempt
+def api_delete_hall(request, _id: int):
+    if request.method != "DELETE":
+        return HttpResponseNotAllowed(["DELETE"])
+
+    check_result = check_jwt(request.headers.get('Authorization').split(" ")[1], True)
+    if type(check_result) != type(True):
+        return HttpResponse(status=401)
+
+    hall = models.Hall.objects.filter(hall_id=_id)
+    if hall.exists():
+        hall.delete()
+        return HttpResponse(status=200)
+    else:
+        return HttpResponseNotFound()
+
+
+@csrf_exempt
+def api_get_halls(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    check_result = check_jwt(request.headers.get('Authorization').split(" ")[1], True)
+    if type(check_result) != type(True):
+        return HttpResponse(status=401)
+
+    halls = models.Hall.objects.all()
+    schools = models.DanceSchool.objects.all()
+    school_dict = {school.dance_school_id: school.dance_school_name for school in schools}
+
+    hall_list = []
+    for hall_id, dance_school_id, hall_name, capacity in halls.values_list(
+            "hall_id",
+            "dance_school_id",
+            "hall_name",
+            "capacity"
+    ):
+        hall_list.append(
+            {
+                "id": hall_id,
+                "name": hall_name,
+                "capacity": capacity,
+                "school": school_dict[dance_school_id]
+            }
+        )
+
+    return JsonResponse(data={"halls": hall_list}, status=200)
